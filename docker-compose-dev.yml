@@ -1,0 +1,84 @@
+version: '3.8'
+services:
+
+  # PHP Service
+  php-fpm:
+    container_name: ${APP_NAME}
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile-dev
+      args:
+        - USER=${CURRENT_USER}
+        - USERID=${CURRENT_USERID}
+    user: ${CURRENT_USER:-www-data}
+    restart: always
+    volumes:
+      - ./${APP_PATH}:/var/www/html
+      - ./logs/php:/var/log/fpm-php.www.log
+    depends_on:
+      - nginx
+      - mariadb
+  #    networks:
+  #      - mynet
+
+
+  # Nginx Service
+  nginx:
+    container_name: ${APP_NAME}-nginx
+    build: docker/nginx
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./${APP_PATH}:/var/www/html
+      - ./logs/nginx:/var/log/nginx/
+#    extra_hosts:
+#      - "host.docker.internal:host-gateway"
+#    networks:
+#      - mynet
+
+
+  # MariaDB Service
+  mariadb:
+    container_name: ${APP_NAME}-db
+    build: docker/db
+#    build:
+#      context: docker/db
+#      dockerfile: Dockerfile
+#      args:
+#        DATABASE: ${DB_DATABASE}
+#        USER: ${DB_USERNAME}
+#        PASSWORD: ${DB_PASSWORD}
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./${DB_PATH}:/var/lib/mysql
+      - ./logs/db:/var/lib/mysql/mysql-bin
+#    networks:
+#      - mynet
+
+
+  # phpMyAdmin Service
+  phpmyadmin:
+    container_name: ${APP_NAME}-phpMyAdmin
+    image: phpmyadmin:latest
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: mariadb
+    depends_on:
+      - mariadb
+#    networks:
+#      - mynet
+
+
+#networks:
+#  mynet:
+#    driver: bridge

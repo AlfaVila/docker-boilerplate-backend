@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+
+  # PHP Service
+  php-fpm:
+    image: ${APP_NAME}:${TAG:-latest}
+    container_name: ${APP_NAME}
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        - APP_PATH=${APP_PATH}
+        - DB_PATH=${DB_PATH}
+#    user: www-data
+    restart: always
+    volumes:
+      - ./logs/php:/var/log/fpm-php.www.log
+    depends_on:
+      - nginx
+      - mariadb
+
+
+  # Nginx Service
+  nginx:
+    image: ${APP_NAME}-nginx:${TAG:-latest}
+    container_name: ${APP_NAME}-nginx
+    build: docker/nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./logs/nginx:/var/log/nginx/
+
+
+  # MariaDB Service
+  mariadb:
+    image: ${APP_NAME}-db:${TAG:-latest}
+    container_name: ${APP_NAME}-db
+    build: docker/db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./logs/db:/var/lib/mysql/mysql-bin

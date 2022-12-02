@@ -1,0 +1,52 @@
+FROM php:8.1-fpm-alpine
+
+# Install persistent dependencies
+RUN set -eux; \
+    apk add --no-cache --update \
+    nano
+
+
+# Info: https://github.com/mlocati/docker-php-extension-installer
+RUN curl -sSLf \
+        -o /usr/local/bin/install-php-extensions \
+        https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions && \
+    chmod +x /usr/local/bin/install-php-extensions && \
+    install-php-extensions mysqli pdo_mysql gmp intl xdebug zip imap opcache imagick @composer @fix_letsencrypt
+# bcmath bz2 calendar exif FFI gd gettext pcntl shmop soap sockets sysvmsg sysvsem sysvshm xmlrpc xsl
+
+
+# set recommended PHP.ini settings
+# see https://secure.php.net/manual/en/opcache.installation.php
+RUN set -eux; \
+	docker-php-ext-enable opcache; \
+	{ \
+		echo 'opcache.memory_consumption=128'; \
+		echo 'opcache.interned_strings_buffer=8'; \
+		echo 'opcache.max_accelerated_files=4000'; \
+		echo 'opcache.revalidate_freq=2'; \
+		echo 'opcache.fast_shutdown=1'; \
+	} > /usr/local/etc/php/conf.d/opcache.ini
+
+
+# Change defalults php.ini
+RUN echo "upload_max_filesize=16M" > /usr/local/etc/php/conf.d/default.ini \
+    && echo "max_file_uploads=200" >> /usr/local/etc/php/conf.d/default.ini \
+    && echo "max_execution_time=60" >> /usr/local/etc/php/conf.d/default.ini \
+    && echo "post_max_size=16M" >> /usr/local/etc/php/conf.d/default.ini \
+    && echo "memory_limit=128M" >> /usr/local/etc/php/conf.d/default.ini \
+    && echo "date.timezone=UTC" >> /usr/local/etc/php/conf.d/default.ini
+
+
+# Configure Xdebug, create docker-php-ext-xdebug.ini with: zend_extension=xdebug.so
+#RUN docker-php-ext-enable xdebug
+RUN echo "xdebug.mode=develop,debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+
+# Add local user to www-data group
+ARG USER
+ARG USERID
+RUN adduser -u ${USERID:-1000} -G www-data -h /home/${USER:-andrey} -D ${USER:-andrey}
+#RUN adduser -u 1000 -G www-data -h /home/andrey -D andrey
+

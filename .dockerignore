@@ -1,0 +1,14 @@
+/docker
+Makefile
+docker-compose-dev.yml
+.gitignore
+
+data/backend/storage/logs/
+data/backend/storage/cache/
+data/backend/storage/sessions/
+data/backend/bootstrap/cache/
+
+data/Vue
+
+.git*
+.idea*
